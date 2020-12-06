@@ -2,7 +2,9 @@
 ### Description
 
 The telegram bot which allows users to get notifications about token prices from 1inch pathfinder service.
+
 If user waits for the pair rate then user gets notification from the bot instead of check it himself.
+
 Stand with bot example: `@exampleBot` - https://t.me/exampleBot
 
 ### Start bot

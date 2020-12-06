@@ -81,6 +81,45 @@ function funcTelegram(){
 }
 
 function workWithUserMessage(msg){
+	// STOP
+	if(msg.text.toLowerCase().indexOf('/stop') == 0){
+		let message = "Bot stopped.\n" +
+					"Just send command /start if you want to get notifications."
+		telegram.sendMessage(msg.chat.id, message, { 
+			'parse_mode': 'html',
+			'disable_web_page_preview': true,
+		}).catch(error => { bot.log.error(`ERROR sendMessage ${error.toString()}`); });
+		sql.setUserActive(1, msg.chat.id).then(() => {}, error => { bot.log.error(`ERROR setUserActive 1 ${msg.chat.id}: ${error.toString()}`); });
+		return;
+	}
+	// LIST
+	if(msg.text.toLowerCase().indexOf('/list') == 0){
+		sql.getNotifications(msg.chat.id).then(notifications => {
+			let message = `<b>Your notification list:</b>\n`;
+			let buttons = [];
+
+			if(notifications == undefined || notifications.length == 0){
+				message += "Empty, you can add notifications with /add command.";
+			} else {
+				for(let i = 0; i < notifications.length; i++){
+					let buttonText1 = notifications[i]['amount'] + " " +bot.config.eth.tokens[notifications[i]['from_token']].symbol + " " + emoji.get('arrow_right') + " " + notifications[i]['min_result'] + " " + bot.config.eth.tokens[notifications[i]['to_token']].symbol;
+					buttons.push([{'text':buttonText1, 'callback_data': '1'}, {'text': emoji.get('red_circle') + " delete", 'callback_data': 'delete|' + notifications[i]['id']}]);
+				}
+			}
+
+			let opt = { 
+				'parse_mode': 'html',
+				'reply_markup': JSON.stringify({
+			        'inline_keyboard': buttons, 
+			    }),
+			};
+
+			telegram.sendMessage(msg.chat.id, message, opt).then(() => {}).catch(err => {
+				bot.log.error(`sendMessage ${msg.chat.id} ${err}`);
+			});
+		}, error => { bot.log.error(`sql.getNotifications ${msg.chat.id}: ${error.toString()}`) });
+	}
+
 	sql.setUserActive(0, msg.chat.id).then(() => {
 		
 		// START
@@ -88,16 +127,6 @@ function workWithUserMessage(msg){
 			let message = "Hello! This bot allows you to get notifications about token prices from 1inch.exchange pathfinder service.\n" +
 						"If you wait for the pair rate then you can get notification about it from the bot instead of check it yourself.\n" +
 						"Use /help to get bot commands.";
-			telegram.sendMessage(msg.chat.id, message, { 
-				'parse_mode': 'html',
-				'disable_web_page_preview': true,
-			}).catch(error => { bot.log.error(`ERROR sendMessage ${error.toString()}`); });
-			return;
-		}
-		// STOP
-		if(msg.text.toLowerCase().indexOf('/stop') == 0){
-			let message = "Bot stopped.\n" +
-						"Just send command /start if you want to get notifications."
 			telegram.sendMessage(msg.chat.id, message, { 
 				'parse_mode': 'html',
 				'disable_web_page_preview': true,
@@ -154,34 +183,6 @@ function workWithUserMessage(msg){
 				}).catch(error => { bot.log.error(`ERROR sendMessage ${error.toString()}`); });
 				return;
 			});	
-		}
-
-		// LIST
-		if(msg.text.toLowerCase().indexOf('/list') == 0){
-			sql.getNotifications(msg.chat.id).then(notifications => {
-				let message = `<b>Your notification list:</b>\n`;
-				let buttons = [];
-
-				if(notifications == undefined || notifications.length == 0){
-					message += "Empty, you can add notifications with /add command.";
-				} else {
-					for(let i = 0; i < notifications.length; i++){
-						let buttonText1 = notifications[i]['amount'] + " " +bot.config.eth.tokens[notifications[i]['from_token']].symbol + " " + emoji.get('arrow_right') + " " + notifications[i]['min_result'] + " " + bot.config.eth.tokens[notifications[i]['to_token']].symbol;
-						buttons.push([{'text':buttonText1, 'callback_data': '1'}, {'text': emoji.get('red_circle') + " delete", 'callback_data': 'delete|' + notifications[i]['id']}]);
-					}
-				}
-
-				let opt = { 
-					'parse_mode': 'html',
-					'reply_markup': JSON.stringify({
-				        'inline_keyboard': buttons, 
-				    }),
-				};
-
-				telegram.sendMessage(msg.chat.id, message, opt).then(() => {}).catch(err => {
-					bot.log.error(`sendMessage ${msg.chat.id} ${err}`);
-				});
-			}, error => { bot.log.error(`sql.getNotifications ${msg.chat.id}: ${error.toString()}`) });
 		}
 	}, error => { bot.log.error(`sql.setUserActive 0 ${msg.chat.id}: ${error.toString()}`) })
 }

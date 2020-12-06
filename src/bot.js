@@ -5,6 +5,10 @@ let winston = require('winston');
 module.exports.request = request;
 
 const TOKENS_URL = "https://tokens.1inch.exchange/v1.0";
+const QUOTE_REQUEST = function(fromToken, toToken, amount){
+    return `https://api.1inch.exchange/v2.0/quote?fromTokenAddress=${fromToken}&toTokenAddress=${toToken}&amount=${amount}`;
+}
+module.exports.QUOTE_REQUEST = QUOTE_REQUEST;
 let config = {}
 
 const myFormat = winston.format.printf(info => {

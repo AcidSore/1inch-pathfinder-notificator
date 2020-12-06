@@ -3,6 +3,7 @@ let TelegramBot = require('node-telegram-bot-api');
 let Web3		= require('web3');
 let emoji 		= require('node-emoji');
 let sql 		= require('./sql.js');
+module.exports.web3 = Web3;
 module.exports.sql = sql;
 
 let telegram;
@@ -14,6 +15,7 @@ function start(){
 	telegram.getMe().then(data => {
 	    bot.log.info(`Connect to @${data.username} telegram bot`);
 	    funcTelegram();
+	    module.exports.telegram = telegram;
 	    require("./notificator.js").start(telegram);
 	}).catch(error => {
 	    bot.dieWithError(`ERROR Telegram getMe error: ${error.toString()}`)
@@ -59,7 +61,12 @@ function funcTelegram(){
 						message += "Empty, you can add notifications with /add command.";
 					} else {
 						for(let i = 0; i < notifications.length; i++){
-							let buttonText1 = notifications[i]['amount'] + " " +bot.config.eth.tokens[notifications[i]['from_token']].symbol + " " + emoji.get('arrow_right') + " " + notifications[i]['min_result'] + " " + bot.config.eth.tokens[notifications[i]['to_token']].symbol;
+							let amountBN = stringToBN(notifications[i]['from_token'], notifications[i]['amount']);
+							let minResultBN = stringToBN(notifications[i]['to_token'], notifications[i]['min_result']);
+							let amountStr = BnToString(amountBN, bot.config.eth.tokens[notifications[i]['from_token']].decimals);
+							let minResultStr = BnToString(minResultBN, bot.config.eth.tokens[notifications[i]['to_token']].decimals);
+							
+							let buttonText1 = amountStr + " " +bot.config.eth.tokens[notifications[i]['from_token']].symbol + " " + emoji.get('arrow_right') + " " + minResultStr + " " + bot.config.eth.tokens[notifications[i]['to_token']].symbol;
 							buttons.push([{'text':buttonText1, 'callback_data': '1'}, {'text': emoji.get('red_circle') + " delete", 'callback_data': 'delete|' + notifications[i]['id']}]);
 						}
 					}
@@ -102,7 +109,12 @@ function workWithUserMessage(msg){
 				message += "Empty, you can add notifications with /add command.";
 			} else {
 				for(let i = 0; i < notifications.length; i++){
-					let buttonText1 = notifications[i]['amount'] + " " +bot.config.eth.tokens[notifications[i]['from_token']].symbol + " " + emoji.get('arrow_right') + " " + notifications[i]['min_result'] + " " + bot.config.eth.tokens[notifications[i]['to_token']].symbol;
+					let amountBN = stringToBN(notifications[i]['from_token'], notifications[i]['amount']);
+					let minResultBN = stringToBN(notifications[i]['to_token'], notifications[i]['min_result']);
+					let amountStr = BnToString(amountBN, bot.config.eth.tokens[notifications[i]['from_token']].decimals);
+					let minResultStr = BnToString(minResultBN, bot.config.eth.tokens[notifications[i]['to_token']].decimals);
+
+					let buttonText1 = amountStr + " " +bot.config.eth.tokens[notifications[i]['from_token']].symbol + " " + emoji.get('arrow_right') + " " + minResultStr + " " + bot.config.eth.tokens[notifications[i]['to_token']].symbol;
 					buttons.push([{'text':buttonText1, 'callback_data': '1'}, {'text': emoji.get('red_circle') + " delete", 'callback_data': 'delete|' + notifications[i]['id']}]);
 				}
 			}
@@ -118,6 +130,7 @@ function workWithUserMessage(msg){
 				bot.log.error(`sendMessage ${msg.chat.id} ${err}`);
 			});
 		}, error => { bot.log.error(`sql.getNotifications ${msg.chat.id}: ${error.toString()}`) });
+		return;
 	}
 
 	sql.setUserActive(0, msg.chat.id).then(() => {
@@ -166,15 +179,32 @@ function workWithUserMessage(msg){
 			}
 			checkAddParams(params).then(() => {
 				sql.isNotificationExist(msg.chat.id, params[1], params[2], params[3], params[4]).then(notification_id => {
-					let message = emoji.get('white_check_mark') + " " + "Task is already exist!";
 					if(notification_id == -1){
-						sql.addNotification(msg.chat.id, params[1], params[2], params[3], params[4]).then(() => {}, error => { bot.log.error(`sql.addNotification ${msg.chat.id} ${params[1]} ${params[2]} ${params[3]} ${params[4]}: ${error.toString()}`) });
-						message = emoji.get('white_check_mark') + " " + "Task created!";	
-					}					
-					telegram.sendMessage(msg.chat.id, message, { 
-						'parse_mode': 'html',
-						'disable_web_page_preview': true,
-					}).catch(error => { bot.log.error(`ERROR sendMessage ${error.toString()}`); });						
+						params[3] = stringToBN(params[1], params[3]);
+						params[4] = stringToBN(params[2], params[4]);
+						bot.request(bot.QUOTE_REQUEST(params[1],params[2],params[3])).then(result => {
+							result = JSON.parse(result);
+							let toTokenAmountBN = new Web3.utils.BN(result['toTokenAmount']);
+							let route = 0;
+							if(toTokenAmountBN.lt(new Web3.utils.BN(params[4]))){
+								route = 1;
+							}
+							sql.addNotification(msg.chat.id, params[1], params[2], params[3], params[4], route).then(() => {}, error => { bot.log.error(`sql.addNotification ${msg.chat.id} ${params[1]} ${params[2]} ${params[3]} ${params[4]}: ${error.toString()}`) });
+							let message = emoji.get('white_check_mark') + " " + "Task created!";	
+							telegram.sendMessage(msg.chat.id, message, { 
+								'parse_mode': 'html',
+								'disable_web_page_preview': true,
+							}).catch(error => { bot.log.error(`ERROR sendMessage ${error.toString()}`); });						
+						}).catch(error => {
+							bot.log.error(`ERROR request QUOTE_REQUEST ${error.toString()}`);
+						});
+					} else {
+						let message = emoji.get('white_check_mark') + " " + "Task is already exist!";
+						telegram.sendMessage(msg.chat.id, message, { 
+							'parse_mode': 'html',
+							'disable_web_page_preview': true,
+						}).catch(error => { bot.log.error(`ERROR sendMessage ${error.toString()}`); });						
+					}
 				}, error => { bot.log.error(`sql.isNotificationExist ${msg.chat.id} ${params[1]} ${params[2]} ${params[3]} ${params[4]}: ${error.toString()}`) });
 			}, invalidParamMsg => {
 				telegram.sendMessage(msg.chat.id, emoji.get('x') + " " + invalidParamMsg.toString(), { 
@@ -185,6 +215,25 @@ function workWithUserMessage(msg){
 			});	
 		}
 	}, error => { bot.log.error(`sql.setUserActive 0 ${msg.chat.id}: ${error.toString()}`) })
+}
+
+function stringToBN(address, amount) {
+	let decimals = bot.config.eth.tokens[address].decimals;
+	let floatPart = amount.split('.')[1];
+	if(floatPart == undefined){
+		floatPart = "";
+	}
+
+	if(decimals < floatPart.length){
+		floatPart = floatPart.substring(0,decimals);
+	}
+	if(decimals > floatPart.length){
+		for(i = floatPart.length; i < decimals; i++){
+			floatPart += "0";
+		}
+	}
+
+	return (new Web3.utils.BN(amount.split('.')[0] + floatPart)).toString();
 }
 
 function checkAddParams(params){
@@ -216,5 +265,27 @@ function checkAddParams(params){
 		ok();		
 	});
 }
+
+function BnToString(bn, decimals){
+	let amountString = bn.toString();
+	let result = "";
+	if(amountString.length > decimals){
+		result = amountString.substring(0, amountString.length-decimals) + "." + amountString.substring(amountString.length-decimals);
+	} else {
+		result = "0.";
+		for(i = amountString.length; i < decimals; i++){
+			result += "0";
+		}
+		result += amountString;
+	}
+	if(result.indexOf('.') != -1){
+		result = result.replace(/0*$/, '');
+		if(result[result.length-1] == '.'){
+			result = result.substring(0, result.length-1);
+		}
+	}
+	return result;
+}
+module.exports.BnToString = BnToString;
 
 

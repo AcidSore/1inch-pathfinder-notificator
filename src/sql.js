@@ -48,7 +48,7 @@ function createTable(tableName){
 			query += "(`id` int(11) unsigned NOT NULL AUTO_INCREMENT,`value` varchar(64) NOT NULL DEFAULT '',PRIMARY KEY (`id`))";
 		}
 		if(tableName == bot.config.sql.tables.notifications){
-			query += "(`id` int(11) unsigned NOT NULL AUTO_INCREMENT,`user_id` int(11) NOT NULL,`from_token` varchar(42) NOT NULL DEFAULT '',`to_token` varchar(42) NOT NULL DEFAULT '',`amount` varchar(32) NOT NULL DEFAULT '',`min_result` varchar(32) NOT NULL DEFAULT '',`last_notification_dt` datetime DEFAULT NULL,PRIMARY KEY (`id`))";
+			query += "(`id` int(11) unsigned NOT NULL AUTO_INCREMENT,`user_id` int(11) NOT NULL,`from_token` varchar(42) NOT NULL DEFAULT '',`to_token` varchar(42) NOT NULL DEFAULT '',`amount` varchar(32) NOT NULL DEFAULT '',`min_result` varchar(32) NOT NULL DEFAULT '',`last_notification_dt` datetime DEFAULT NULL,`route` int(11) NOT NULL, PRIMARY KEY (`id`))";
 		}
 
 		query += " DEFAULT CHARSET=utf8;";
@@ -141,19 +141,24 @@ function setUserActive(active, telegram_id){
 }
 module.exports.setUserActive = setUserActive;
 
-function addNotification(telegram_id, from_token, to_token, amount, min_result) {
+/*
+ *   route:
+ *      0 - wait when toTokenAmount more then min_result
+ * 		1 - wait when toTokenAmount less then min_result
+ */
+function addNotification(telegram_id, from_token, to_token, amount, min_result, route) {
 	return new Promise(function(ok, fail){
-		var query = `INSERT INTO \`${bot.config.sql.tables.notifications}\` (\`user_id\`, \`from_token\`, \`to_token\`, \`amount\`, \`min_result\`) VALUES ((SELECT \`id\` FROM \`${bot.config.sql.tables.users}\` WHERE \`telegram_id\` = ?),?,?,?,?)`;
+		var query = `INSERT INTO \`${bot.config.sql.tables.notifications}\` (\`user_id\`, \`from_token\`, \`to_token\`, \`amount\`, \`min_result\`, \`route\`) VALUES ((SELECT \`id\` FROM \`${bot.config.sql.tables.users}\` WHERE \`telegram_id\` = ?),?,?,?,?,?)`;
 		
 		if(sql.connection.state == 'disconnected'){
 			sql.connection = sql.connect();
 			setTimeout(function(){ 
-				queryCommand(query, [telegram_id, from_token, to_token, amount, min_result]).then(_ok => { ok(_ok); }, _fail => { fail(_fail); }).catch(err => { fail(err); });
+				queryCommand(query, [telegram_id, from_token, to_token, amount, min_result, route]).then(_ok => { ok(_ok); }, _fail => { fail(_fail); }).catch(err => { fail(err); });
 			}, 1000);
 			return;
 		}
 
-		queryCommand(query, [telegram_id, from_token, to_token, amount, min_result]).then(_ok => { ok(_ok); }, _fail => { fail(_fail); }).catch(err => { fail(err); });
+		queryCommand(query, [telegram_id, from_token, to_token, amount, min_result, route]).then(_ok => { ok(_ok); }, _fail => { fail(_fail); }).catch(err => { fail(err); });
 	});
 }
 module.exports.addNotification = addNotification;
@@ -211,7 +216,14 @@ module.exports.delNotifications = delNotifications;
 
 function getAllNotifications(limit, offset = 0) {
 	return new Promise(function(ok, fail){
-		var query = `SELECT * FROM \`${bot.config.sql.tables.notifications}\` LIMIT ? OFFSET ?`;
+		var query = `SELECT 
+				\`n\`.\`id\`, \`u\`.\`telegram_id\`, \`n\`.\`from_token\`, \`n\`.\`to_token\`, \`n\`.\`amount\`, \`n\`.\`min_result\`, \`n\`.\`route\`
+			FROM 
+				\`${bot.config.sql.tables.notifications}\` n, \`${bot.config.sql.tables.users}\` u 
+			WHERE \`n\`.\`user_id\` = \`u\`.\`id\`
+			  AND \`u\`.\`status\` = 0
+			  AND (\`n\`.\`last_notification_dt\` IS NULL OR \`n\`.\`last_notification_dt\` <= NOW() - INTERVAL 1 HOUR)
+			LIMIT ? OFFSET ?`;
 		
 		if(sql.connection.state == 'disconnected'){
 			sql.connection = sql.connect();
@@ -225,4 +237,21 @@ function getAllNotifications(limit, offset = 0) {
 	});
 }
 module.exports.getAllNotifications = getAllNotifications;
+
+function updateNotificationLastDt(id) {
+	return new Promise(function(ok, fail){
+		var query = `UPDATE \`${bot.config.sql.tables.notifications}\` SET \`last_notification_dt\` = NOW() WHERE \`id\` = ?`;
+		
+		if(sql.connection.state == 'disconnected'){
+			sql.connection = sql.connect();
+			setTimeout(function(){ 
+				queryCommand(query, [id]).then(_ok => { ok(_ok); }, _fail => { fail(_fail); }).catch(err => { fail(err); });
+			}, 1000);
+			return;
+		}
+
+		queryCommand(query, [id]).then(_ok => { ok(_ok); }, _fail => { fail(_fail); }).catch(err => { fail(err); });
+	});
+}
+module.exports.updateNotificationLastDt = updateNotificationLastDt;
 

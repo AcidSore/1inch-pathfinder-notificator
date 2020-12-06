@@ -61,11 +61,9 @@ function funcTelegram(){
 						message += "Empty, you can add notifications with /add command.";
 					} else {
 						for(let i = 0; i < notifications.length; i++){
-							let amountBN = stringToBN(notifications[i]['from_token'], notifications[i]['amount']);
-							let minResultBN = stringToBN(notifications[i]['to_token'], notifications[i]['min_result']);
-							let amountStr = BnToString(amountBN, bot.config.eth.tokens[notifications[i]['from_token']].decimals);
-							let minResultStr = BnToString(minResultBN, bot.config.eth.tokens[notifications[i]['to_token']].decimals);
-							
+							let amountStr = BnToString(new Web3.utils.BN(notifications[i]['amount']), bot.config.eth.tokens[notifications[i]['from_token']].decimals);
+							let minResultStr = BnToString(new Web3.utils.BN(notifications[i]['min_result']), bot.config.eth.tokens[notifications[i]['to_token']].decimals);
+					
 							let buttonText1 = amountStr + " " +bot.config.eth.tokens[notifications[i]['from_token']].symbol + " " + emoji.get('arrow_right') + " " + minResultStr + " " + bot.config.eth.tokens[notifications[i]['to_token']].symbol;
 							buttons.push([{'text':buttonText1, 'callback_data': '1'}, {'text': emoji.get('red_circle') + " delete", 'callback_data': 'delete|' + notifications[i]['id']}]);
 						}
@@ -109,10 +107,8 @@ function workWithUserMessage(msg){
 				message += "Empty, you can add notifications with /add command.";
 			} else {
 				for(let i = 0; i < notifications.length; i++){
-					let amountBN = stringToBN(notifications[i]['from_token'], notifications[i]['amount']);
-					let minResultBN = stringToBN(notifications[i]['to_token'], notifications[i]['min_result']);
-					let amountStr = BnToString(amountBN, bot.config.eth.tokens[notifications[i]['from_token']].decimals);
-					let minResultStr = BnToString(minResultBN, bot.config.eth.tokens[notifications[i]['to_token']].decimals);
+					let amountStr = BnToString(new Web3.utils.BN(notifications[i]['amount']), bot.config.eth.tokens[notifications[i]['from_token']].decimals);
+					let minResultStr = BnToString(new Web3.utils.BN(notifications[i]['min_result']), bot.config.eth.tokens[notifications[i]['to_token']].decimals);
 
 					let buttonText1 = amountStr + " " +bot.config.eth.tokens[notifications[i]['from_token']].symbol + " " + emoji.get('arrow_right') + " " + minResultStr + " " + bot.config.eth.tokens[notifications[i]['to_token']].symbol;
 					buttons.push([{'text':buttonText1, 'callback_data': '1'}, {'text': emoji.get('red_circle') + " delete", 'callback_data': 'delete|' + notifications[i]['id']}]);

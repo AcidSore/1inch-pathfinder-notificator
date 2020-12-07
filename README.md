@@ -27,7 +27,6 @@ The following bot commands are available:
 - `/start` - start bot and getting the greeting
 - `/stop` - stop bot
 - `/list` - list all tasks for notifications which are added in the chat, also user can delete a task
-   Syntax: `/list`
 - `/add` - add task for notification
    Syntax: `/add <from_token> <to_token> <amount> <min_result>`
    **from_token** - token address or symbol which you want to exchange

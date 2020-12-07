@@ -128,6 +128,28 @@ function workWithUserMessage(msg){
 		}, error => { bot.log.error(`sql.getNotifications ${msg.chat.id}: ${error.toString()}`) });
 		return;
 	}
+	// HELP
+	if(msg.text.toLowerCase().indexOf('/help') == 0){
+		let message = "<b>The following bot commands are available:</b>\n\n" +
+					"<b>/start</b> - start bot and getting the greeting\n" +
+					"=============================\n" +
+					"<b>/stop</b> - stop bot\n" +
+					"=============================\n" +
+					"<b>/list</b> - list all tasks for notifications which are added in the chat, also user can delete a task\n" +
+					"=============================\n" +
+					"<b>/add</b> - add task for notification\n\n<b>Syntax:</b> <code>/add from_token to_token amount min_result</code>\n" +
+					emoji.get('white_small_square') + "<i>from_token</i> - token address or symbol which you want to exchange\n" +
+					emoji.get('white_small_square') + "<i>to_token</i> - token address or symbol which you want to recieve\n" + 
+					emoji.get('white_small_square') + "<i>amount</i> - amount of from_token which you want to exchange\n" +
+					emoji.get('white_small_square') + "<i>min_result</i> - minimum amount of to_token which you want to recieve\n" +
+					"=============================\n" +
+					"<b>/help</b> - print commands and descriptions\n";
+		telegram.sendMessage(msg.chat.id, message, { 
+			'parse_mode': 'html',
+			'disable_web_page_preview': true,
+		}).catch(error => { bot.log.error(`ERROR sendMessage ${error.toString()}`); });
+		return;
+	}
 
 	sql.setUserActive(0, msg.chat.id).then(() => {
 		
@@ -136,28 +158,6 @@ function workWithUserMessage(msg){
 			let message = "Hello! This bot allows you to get notifications about token prices from 1inch.exchange pathfinder service.\n" +
 						"If you wait for the pair rate then you can get notification about it from the bot instead of check it yourself.\n" +
 						"Use /help to get bot commands.";
-			telegram.sendMessage(msg.chat.id, message, { 
-				'parse_mode': 'html',
-				'disable_web_page_preview': true,
-			}).catch(error => { bot.log.error(`ERROR sendMessage ${error.toString()}`); });
-			return;
-		}
-		// HELP
-		if(msg.text.toLowerCase().indexOf('/help') == 0){
-			let message = "<b>The following bot commands are available:</b>\n\n" +
-						"<b>/start</b> - start bot and getting the greeting\n" +
-						"=============================\n" +
-						"<b>/stop</b> - stop bot\n" +
-						"=============================\n" +
-						"<b>/list</b> - list all tasks for notifications which are added in the chat, also user can delete a task\n\n<b>Syntax:</b> <code>/list</code>\n" +
-						"=============================\n" +
-						"<b>/add</b> - add task for notification\n\n<b>Syntax:</b> <code>/add from_token to_token amount min_result</code>\n" +
-						emoji.get('white_small_square') + "<i>from_token</i> - token address or symbol which you want to exchange\n" +
-						emoji.get('white_small_square') + "<i>to_token</i> - token address or symbol which you want to recieve\n" + 
-						emoji.get('white_small_square') + "<i>amount</i> - amount of from_token which you want to exchange\n" +
-						emoji.get('white_small_square') + "<i>min_result</i> - minimum amount of to_token which you want to recieve\n" +
-						"=============================\n" +
-						"<b>/help</b> - print commands and descriptions\n";
 			telegram.sendMessage(msg.chat.id, message, { 
 				'parse_mode': 'html',
 				'disable_web_page_preview': true,

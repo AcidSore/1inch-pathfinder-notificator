@@ -32,6 +32,9 @@ The following bot commands are available:
    **from_token** - token address or symbol which you want to exchange<br>
    **to_token** - token address or symbol which you want to recieve<br>
    **amount** - amount of from_token which you want to exchange<br>
-   **min_result** - minimum amount of to_token which you want to recieve
+   **min_result** - minimum amount of to_token which you want to recieve<br>
+   Examples:<br>
+   - `/add eth usdt 1.5 1000`
+   - `/add 0x6b175474e89094c44da98b954eedeac495271d0f usdt 1 1.2`
 - `/help` - print commands and descriptions
   

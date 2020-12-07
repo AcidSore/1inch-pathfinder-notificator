@@ -5,7 +5,7 @@ The telegram bot which allows users to get notifications about token prices from
 
 If user waits for the pair rate then user gets notification from the bot instead of check it himself.
 
-Stand with bot example: `@exampleBot` - https://t.me/exampleBot
+Stand with bot example: `@pathfinder_notificator_bot` - https://t.me/pathfinder_notificator_bot
 
 ### Start bot
 1. Create database, it may be empty (without any tables)
